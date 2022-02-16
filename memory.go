@@ -1,12 +1,14 @@
 package main
 
+import "os"
+
 const (
 	MEM_BYTES      = 4096
 	PROG_MEM_START = 0x200
 	FONT_COUNT     = 80
 )
 
-var font_set = [FONT_COUNT]uint{
+var font_set = [FONT_COUNT]byte{
 	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 	0x20, 0x60, 0x20, 0x20, 0x70, // 1
 	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -25,6 +27,23 @@ var font_set = [FONT_COUNT]uint{
 	0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 }
 
-type Memory struct {
-	// TODO
+type RAM struct {
+	memory [MEM_BYTES]byte
+}
+
+func (r *RAM) LoadROM(rom *os.File) {
+	progSlice := r.memory[PROG_MEM_START:]
+	_, err := rom.Read(progSlice)
+	if err != nil {
+		panic(err)
+	}
+	for i := PROG_MEM_START; i < MEM_BYTES; i += 1 {
+		r.memory[i] = progSlice[i-PROG_MEM_START]
+	}
+}
+
+func (r *RAM) LoadFont() {
+	for i, f := range font_set {
+		r.memory[i] = f
+	}
 }
