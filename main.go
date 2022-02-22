@@ -21,7 +21,7 @@ func run() {
 		panic(err)
 	}
 
-	win.Clear(colornames.Skyblue)
+	win.Clear(colornames.Black)
 
 	device := newDevice()
 
@@ -42,6 +42,7 @@ func run() {
 		device.emulateCycle()
 		// TODO update screen here
 		win.Update()
+		// TODO implement a 'tick' timer
 	}
 }
 

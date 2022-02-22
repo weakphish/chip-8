@@ -24,7 +24,7 @@ func newDevice() *Device {
 // This function represents a single cycle in the emulation loop.
 func (d *Device) emulateCycle() {
 	// Get the instruction at the PC and increment the PC
-	var instruction uint16 = uint16(d.ram.memory[d.cpu.programCounter])
+	var instruction uint16 = uint16(d.ram.mem[d.cpu.programCounter])
 	d.cpu.programCounter++
 
 	// Decode instruction

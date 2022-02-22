@@ -28,7 +28,7 @@ var font_set = [FONT_COUNT]byte{
 }
 
 type RAM struct {
-	memory [MEM_BYTES]byte
+	mem [MEM_BYTES]byte
 }
 
 func newRAM() *RAM {
@@ -36,18 +36,14 @@ func newRAM() *RAM {
 }
 
 func (r *RAM) LoadROM(rom *os.File) {
-	progSlice := r.memory[PROG_MEM_START:]
-	_, err := rom.Read(progSlice)
+	_, err := rom.Read(r.mem[PROG_MEM_START:])
 	if err != nil {
 		panic(err)
-	}
-	for i := PROG_MEM_START; i < MEM_BYTES; i += 1 {
-		r.memory[i] = progSlice[i-PROG_MEM_START]
 	}
 }
 
 func (r *RAM) LoadFont() {
 	for i, f := range font_set {
-		r.memory[i] = f
+		r.mem[i] = f
 	}
 }
