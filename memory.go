@@ -36,7 +36,7 @@ func newRAM() *RAM {
 }
 
 func (r *RAM) LoadROM(rom *os.File) {
-	_, err := rom.Read(r.mem[PROG_MEM_START:])
+	_, err := rom.Read(r.mem[PROG_MEM_START-1:])
 	if err != nil {
 		panic(err)
 	}
