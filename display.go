@@ -8,3 +8,7 @@ const (
 type Display struct {
 	frame [DISPLAY_HEIGHT][DISPLAY_WIDTH]bool
 }
+
+func newDisplay() *Display {
+	return &Display{}
+}

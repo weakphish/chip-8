@@ -31,6 +31,10 @@ type RAM struct {
 	memory [MEM_BYTES]byte
 }
 
+func newRAM() *RAM {
+	return &RAM{}
+}
+
 func (r *RAM) LoadROM(rom *os.File) {
 	progSlice := r.memory[PROG_MEM_START:]
 	_, err := rom.Read(progSlice)
