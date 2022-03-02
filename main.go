@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"github.com/faiface/pixel"
@@ -24,6 +25,12 @@ func run() {
 	win.Clear(colornames.Black)
 
 	device := newDevice()
+
+	// Check if a rom was provided
+	if len(os.Args) < 2 {
+		log.Println("Not enough arguments provided.\nUsage: 'chip-8 <path-to-rom>'")
+		return
+	}
 
 	// Load ROM into RAM and load font
 	args := os.Args[1:]
