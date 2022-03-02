@@ -30,10 +30,10 @@ func (d *Device) emulateCycle() {
 	d.cpu.programCounter++
 
 	nibble := (opcode & 0xF000) >> 12
-	x := (opcode & 0x0F00) >> 8
-	y := (opcode & 0x00F0) >> 4
-	n := (opcode & 0x000F)
-	nn := opcode & 0x00FF
+	x := uint8((opcode & 0x0F00) >> 8)
+	y := uint8((opcode & 0x00F0) >> 4)
+	n := uint8((opcode & 0x000F))
+	nn := uint8(opcode & 0x00FF)
 	nnn := opcode & 0x0FFF
 
 	// Decode instruction
@@ -48,9 +48,14 @@ func (d *Device) emulateCycle() {
 	case 0x1:
 		d.jump(nnn)
 	case 0x6:
-
+		d.add(x, nn)
+	case 0x7:
+		d.add(x, nn)
+	case 0xA:
+		d.setIndex(nnn)
+	case 0xD:
+		d.draw(x, y, n)
 	}
-
 }
 
 // CLS - 00E0
@@ -78,13 +83,26 @@ func (d *Device) jump(nnn uint16) {
 
 // SET - 6XNN
 // Simply set the register VX to the value NN.
-func (d *Device) setRegister(vx uint8, nn uint8) {
+func (d *Device) setRegister(vx, nn uint8) {
 	d.cpu.generalRegisters[vx] = nn
 }
 
 // ADD - 7XNN
 // Add the value NN to the value of register VX and store the result in VX.
-func (d *Device) add(vx uint8, nn uint8) {
+func (d *Device) add(x, nn uint8) {
 	// VX := VX + NN
-	d.cpu.generalRegisters[vx] += nn
+	d.cpu.generalRegisters[x] += uint8(nn)
+}
+
+// SET I - ANNN
+// Set index register I to the value of NNN
+func (d *Device) setIndex(nnn uint16) {
+	d.cpu.indexRegister = nnn
+}
+
+// DRAW - DXYN
+// Draw the display
+func (d *Device) draw(x, y, n uint8) {
+	xCoord := d.cpu.generalRegisters[x] % DISPLAY_WIDTH
+	yCoord := d.cpu.generalRegisters[y] % DISPLAY_WIDTH
 }
