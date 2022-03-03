@@ -1,11 +1,49 @@
 package main
 
+import (
+	"image/color"
+	"log"
+	"os"
+
+	"github.com/hajimehoshi/ebiten"
+)
+
+const (
+	MEM_BYTES      = 4096
+	PROG_MEM_START = 0x200
+	FONT_COUNT     = 80
+)
+
+var font_set = [FONT_COUNT]byte{
+	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+	0x20, 0x60, 0x20, 0x20, 0x70, // 1
+	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+	0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+	0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+	0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+	0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+	0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+	0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+	0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+	0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+	0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+	0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+	0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+	0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+	0xF0, 0x80, 0xF0, 0x80, 0x80, // F
+}
+
+const (
+	DISPLAY_HEIGHT = 32
+	DISPLAY_WIDTH  = 64
+)
+
 const STACK_SIZE = 16
 
 type Device struct {
-	ram     *RAM
+	ram     [MEM_BYTES]byte
 	cpu     *CPU
-	display *Display
+	display [DISPLAY_HEIGHT][DISPLAY_WIDTH]bool
 	stack   *Stack
 }
 
@@ -14,20 +52,50 @@ func newDevice() *Device {
 	cpu := newCPU()
 	stack := newStack(&cpu.stackPointer)
 	return &Device{
-		ram:     newRAM(),
-		cpu:     cpu,
-		display: newDisplay(),
-		stack:   stack,
+		cpu:   cpu,
+		stack: stack,
+	}
+}
+
+func (d *Device) LoadROM(rom *os.File) {
+	_, err := rom.Read(d.ram[PROG_MEM_START:])
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (d *Device) LoadFont() {
+	for i, f := range font_set {
+		d.ram[i] = f
+	}
+}
+
+func (d *Device) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+	return DISPLAY_WIDTH, DISPLAY_HEIGHT
+}
+
+func (d *Device) Draw(screen *ebiten.Image) {
+	for x := range d.display {
+		for y := range d.display[x] {
+			screen.Set(x, y, color.White)
+		}
 	}
 }
 
 // This function represents a single cycle in the emulation loop. It will get the instruction
 // at the program counter, decode and execute it, and then make the neccesary updates to the state
 // of the device.
-func (d *Device) emulateCycle() {
+func (d *Device) Update(screen *ebiten.Image) error {
 	// Get the opcode at the PC and increment the PC
-	opcode := uint16(d.ram.mem[d.cpu.programCounter])
+	var opcode uint16
+	b1 := d.ram[d.cpu.programCounter]
 	d.cpu.programCounter++
+	b2 := d.ram[d.cpu.programCounter]
+	d.cpu.programCounter++
+
+	opcode = (uint16(b1) << 8) | uint16(b2)
+
+	log.Printf("Current Opcode: %x\n", opcode)
 
 	nibble := (opcode & 0xF000) >> 12
 	x := uint8((opcode & 0x0F00) >> 8)
@@ -38,7 +106,7 @@ func (d *Device) emulateCycle() {
 
 	// Decode instruction
 	switch nibble {
-	case 0x00:
+	case 0x0:
 		switch nn {
 		case 0xE0:
 			d.clearScreen()
@@ -54,8 +122,10 @@ func (d *Device) emulateCycle() {
 	case 0xA:
 		d.setIndex(nnn)
 	case 0xD:
-		d.draw(x, y, n)
+		d.updatePixelBuffer(x, y, n)
 	}
+
+	return nil
 }
 
 // CLS - 00E0
@@ -63,7 +133,7 @@ func (d *Device) emulateCycle() {
 func (d *Device) clearScreen() {
 	for i := 0; i < DISPLAY_HEIGHT; i++ {
 		for j := 0; j < DISPLAY_WIDTH; j++ {
-			d.display.frame[i][j] = false
+			d.display[i][j] = false
 		}
 	}
 }
@@ -101,8 +171,27 @@ func (d *Device) setIndex(nnn uint16) {
 }
 
 // DRAW - DXYN
-// Draw the display
-func (d *Device) draw(x, y, n uint8) {
+// Draw the display buffer
+func (d *Device) updatePixelBuffer(x, y, n uint8) {
 	xCoord := d.cpu.generalRegisters[x] % DISPLAY_WIDTH
-	yCoord := d.cpu.generalRegisters[y] % DISPLAY_WIDTH
+	yCoord := d.cpu.generalRegisters[y] % DISPLAY_HEIGHT
+
+	// Set VF to 0
+	d.cpu.generalRegisters[0xF] = 0
+
+	var row uint16
+	for row = 0; row < uint16(n); row++ {
+		sprData := d.ram[d.cpu.indexRegister+row]
+		for bit := 0; bit < 8; bit++ {
+			pixel := sprData << bit
+			if pixel != 0 && d.display[xCoord][yCoord] {
+				d.display[xCoord][yCoord] = false
+				d.cpu.generalRegisters[0xF] = 1
+			} else if pixel != 0 && !d.display[xCoord][yCoord] {
+				d.display[xCoord][yCoord] = true
+			}
+			xCoord++
+		}
+		yCoord++
+	}
 }
