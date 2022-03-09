@@ -172,26 +172,13 @@ func (d *Device) setIndex(nnn uint16) {
 
 // DRAW - DXYN
 // Draw the display buffer
+// TODO
 func (d *Device) updatePixelBuffer(x, y, n uint8) {
-	xCoord := d.cpu.generalRegisters[x] % DISPLAY_WIDTH
-	yCoord := d.cpu.generalRegisters[y] % DISPLAY_HEIGHT
+	vx := d.cpu.generalRegisters[x]
+	vy := d.cpu.generalRegisters[y]
 
-	// Set VF to 0
+	xcoord := vx % DISPLAY_WIDTH
+	ycoord := vy % DISPLAY_WIDTH
+
 	d.cpu.generalRegisters[0xF] = 0
-
-	var row uint16
-	for row = 0; row < uint16(n); row++ {
-		sprData := d.ram[d.cpu.indexRegister+row]
-		for bit := 0; bit < 8; bit++ {
-			pixel := sprData << bit
-			if pixel != 0 && d.display[xCoord][yCoord] {
-				d.display[xCoord][yCoord] = false
-				d.cpu.generalRegisters[0xF] = 1
-			} else if pixel != 0 && !d.display[xCoord][yCoord] {
-				d.display[xCoord][yCoord] = true
-			}
-			xCoord++
-		}
-		yCoord++
-	}
 }
