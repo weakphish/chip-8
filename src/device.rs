@@ -41,6 +41,7 @@ impl Device {
         // Execute
         match nibbles {
             (0x0, 0x0, 0xE, 0x0) => self.clear_screen(),
+            (0x1, _, _, _) => self.jump_to(nnn),
             _ => panic!("Unknown opcode {:?}", nibbles),
         }
 
@@ -56,5 +57,18 @@ impl Device {
                 pixel = false;
             }
         }
+    }
+
+    //
+    // 1NNN: Jump
+    // This instruction should simply set PC to NNN, causing the program to jump to that memory
+    // location. Do not increment the PC afterwards, it jumps directly there.
+    fn jump_to(&mut self, nnn: u16) {
+        self.cpu.set_pc(nnn)
+    }
+
+    // 6XNN: Set
+    // Simply set the register VX to the value NN.
+    fn set_vx(&mut self, nn: u16) {
     }
 }

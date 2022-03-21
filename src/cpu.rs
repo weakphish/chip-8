@@ -26,4 +26,8 @@ impl CPU {
     pub fn increment_pc(&mut self) {
         self.program_counter += 1;
     }
+
+    pub fn set_pc(&mut self, val: u16) {
+        self.program_counter = val;
+    }
 }
