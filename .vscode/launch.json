@@ -5,12 +5,22 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Run IBM Logo",
-			"type": "go",
+			"type": "lldb",
 			"request": "launch",
-			"mode": "auto",
-			"program": "${workspaceFolder}",
-			"args": ["./roms/ibm.ch8"]
-		}
+			"name": "Debug IBM Logo",
+			"cargo": {
+				"args": [
+					"build",
+					"--bin=chip-8",
+					"--package=chip-8"
+				],
+				"filter": {
+					"name": "chip-8",
+					"kind": "bin"
+				}
+			},
+			"args": ["./roms/ibm.ch8"],
+			"cwd": "${workspaceFolder}"
+		},
 	]
 }
