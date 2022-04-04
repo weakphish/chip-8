@@ -1,7 +1,7 @@
 use std::fs::File;
 
-const DISPLAY_HEIGHT: usize = 32;
-const DISPLAY_WIDTH: usize = 64;
+pub const DISPLAY_HEIGHT: usize = 32;
+pub const DISPLAY_WIDTH: usize = 64;
 
 pub struct Device {
     ram: crate::ram::RAM,
@@ -44,6 +44,7 @@ impl Device {
             (0x1, _, _, _) => self.jump_to(nnn),
             (0x6, x, _, _) => self.cpu.set_register(x as usize, nn),
             (0x7, x, _, _) => self.add_to_register(x, nn),
+            (0xD, x, y, n) => self.update_vram(x, y, n as u8),
             _ => panic!("Unknown opcode {:?}", nibbles),
         }
 

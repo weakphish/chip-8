@@ -61,8 +61,9 @@ impl RAM {
 
         let mut i: usize = 0;
         for pos in PROG_MEM_START..MEM_BYTES {
-            match self.set_memory(*buffer.get(i).unwrap(), pos) {
-                Ok(_) => println!("Set memory {:?}", pos),
+            let mem_val = *buffer.get(i).unwrap();
+            match self.set_memory(mem_val, pos) {
+                Ok(_) => println!("Set memory address {:?} to value {:?}", pos, mem_val),
                 Err(e) => println!(
                     "Could not set ROM into memory. Data may be corrupted. Error: {:?}",
                     e
