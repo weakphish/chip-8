@@ -1,5 +1,6 @@
 use std::env;
 use std::fs::File;
+use std::time::Duration;
 
 mod device;
 mod cpu;
@@ -14,9 +15,4 @@ fn main() {
     let filename = args.get(1).expect("No ROM filename provided.");
     dev.load_rom(File::open(filename).unwrap());
     println!("Loaded ROM.");
-
-    // Run emulation loop
-    loop {
-        dev.emulate_cycle();
-    }
 }
