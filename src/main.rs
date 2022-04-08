@@ -15,14 +15,23 @@ mod stack;
 mod ram;
 
 fn main() -> Result<(), Error> {
-    // Setup
+    // Create the struct that represents the physical device state
+    let mut dev = device::Device::new_device();
+
+    // Load file into memory
+    let args: Vec<String>  = env::args().collect();
+    let filename = args.get(1).expect("No ROM filename provided.");
+    dev.load_rom(File::open(filename).unwrap());
+    println!("Loaded ROM.");
+
+    // Setup Pixels context
     env_logger::init();
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let window = {
         let size = LogicalSize::new(device::DISPLAY_WIDTH as f64, device::DISPLAY_HEIGHT as f64);
         WindowBuilder::new()
-            .with_title("Hello Pixels")
+            .with_title("Chip-8")
             .with_inner_size(size)
             .with_min_inner_size(size)
             .build(&event_loop)
@@ -35,20 +44,24 @@ fn main() -> Result<(), Error> {
         Pixels::new(device::DISPLAY_WIDTH as u32, device::DISPLAY_HEIGHT as u32, surface_texture)?
     };
 
-    // Create the struct that represents the physical device state
-    let mut dev = device::Device::new_device();
-
-    // Load file into memory
-    let args: Vec<String>  = env::args().collect();
-    let filename = args.get(1).expect("No ROM filename provided.");
-    dev.load_rom(File::open(filename).unwrap());
-    println!("Loaded ROM.");
-    
     // Main event loop
     event_loop.run(move |event, _, control_flow| {
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {
             let frame = pixels.get_frame();
+            // Update frame with contents of device's VRAM
+            if dev.get_vram_changed() {
+                let vram_snap = dev.get_vram();
+                for (vram_pixel, frame_pixel) in vram_snap.iter().flatten().zip(frame.chunks_exact_mut(4)) {
+                    let chunk = if *vram_pixel {
+                        [255, 255, 255, 255]
+                    } else {
+                        [0, 0, 0, 255]
+                    };
+                    frame_pixel.copy_from_slice(&chunk);
+                    println!("Set {:?} to {:?}", frame_pixel, vram_pixel);
+                }
+            }
             if pixels
                 .render()
                 .map_err(|e| error!("pixels.render() failed: {}", e))
@@ -73,7 +86,7 @@ fn main() -> Result<(), Error> {
             }
 
             // Update internal state and request a redraw
-            // world.update();
+            dev.emulate_cycle();
             window.request_redraw();
         }
     });

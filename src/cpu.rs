@@ -24,7 +24,7 @@ impl CPU {
     }
 
     pub fn increment_pc(&mut self) {
-        self.program_counter += 1;
+        self.program_counter += 2;
     }
 
     pub fn set_pc(&mut self, val: u16) {
@@ -33,6 +33,10 @@ impl CPU {
 
     pub fn get_index_register(&self) -> u16 {
         self.index_register
+    }
+
+    pub fn set_index_register(&mut self, val: u16) {
+        self.index_register = val;
     }
 
     pub fn set_register(&mut self, x: usize, val: u8) {
