@@ -7,7 +7,7 @@ pub const DISPLAY_WIDTH: usize = 64;
 pub struct Device {
     ram: crate::ram::RAM,
     vram_changed: bool,                            // special flag bc i'm an idiot
-    vram: [[u8; DISPLAY_HEIGHT]; DISPLAY_WIDTH],   // access at vram[x][y]
+    vram: [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],   // access at vram[y][x]
     cpu: crate::cpu::CPU,
 }
 
@@ -16,7 +16,7 @@ impl Device {
         Device {
             ram: crate::ram::RAM::new_ram(),
             vram_changed: false,
-            vram: [[0; DISPLAY_HEIGHT]; DISPLAY_WIDTH],
+            vram: [[0; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
             cpu: crate::cpu::CPU::new_cpu(),
         }
     }
@@ -65,7 +65,7 @@ impl Device {
     }
 
     // Get the device's VRAM
-    pub fn get_vram(&mut self) -> &[[u8; DISPLAY_HEIGHT]; DISPLAY_WIDTH] {
+    pub fn get_vram(&mut self) -> &[[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT] {
         self.vram_changed = false;
         &self.vram
     }
@@ -110,6 +110,13 @@ impl Device {
     }
 
     // DXYN: Display
+    // The interpreter reads n bytes from memory, starting at the address
+    // stored in I. These bytes are then displayed as sprites on screen at
+    // coordinates (Vx, Vy). Sprites are XORed onto the existing screen.
+    // If this causes any pixels to be erased, VF is set to 1, otherwise
+    // it is set to 0. If the sprite is positioned so part of it is outside
+    // the coordinates of the display, it wraps around to the opposite side
+    // of the screen.
     fn update_vram(&mut self, mut x: u16, mut y: u16, n: u8) {
         self.cpu.general_registers[0xF] = 0;
         for byte in 0..n {
@@ -121,8 +128,8 @@ impl Device {
                     .read_memory((self.cpu.index_register + byte as u16).into())
                     >> (7 - bit))
                     & 1;
-                self.cpu.general_registers[0xF] |= fill & self.vram[x][y];
-                self.vram[x][y] ^= fill;
+                self.cpu.general_registers[0xF] |= fill & self.vram[y][x];
+                self.vram[y][x] ^= fill;
             }
         }
         self.vram_changed = true;
