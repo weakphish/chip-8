@@ -48,14 +48,14 @@ impl CPU {
 
         // Execute
         match nibbles {
-            (0x0, 0x0, 0xE, 0x0) => self.clear_screen(vram),
-            (0x0, 0x0, 0xE, 0xE) => self.return_from_subroutine(stack),
-            (0x1, _, _, _) => self.jump_to(nnn),
-            (0x2, _, _, _) => self.subroutine(stack, nnn),
+            (0x0, 0x0, 0xE, 0x0) => self.op_clear_screen(vram),
+            (0x0, 0x0, 0xE, 0xE) => self.op_return_from_subroutine(stack),
+            (0x1, _, _, _) => self.op_jump(nnn),
+            (0x2, _, _, _) => self.op_subroutine(stack, nnn),
             (0x6, x, _, _) => self.general_registers[x as usize] = nn,
-            (0x7, x, _, _) => self.add_to_register(x, nn),
-            (0xA, _, _, _) => self.set_index(nnn),
-            (0xD, x, y, n) => self.update_vram(vram, ram, x, y, n as u8),
+            (0x7, x, _, _) => self.op_add(x, nn),
+            (0xA, _, _, _) => self.op_set_index(nnn),
+            (0xD, x, y, n) => self.op_display_vram(vram, ram, x, y, n as u8),
             _ => panic!(
                 "Unknown opcode ({:#01x} {:#01x} {:#01x} {:#01x})",
                 nibbles.0, nibbles.1, nibbles.2, nibbles.3
@@ -72,7 +72,7 @@ impl CPU {
 
     // CLS - 00E0
     // Clear the screen of the display (set all the pixels to 'off')
-    fn clear_screen(&mut self, vram: &mut [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT]) {
+    fn op_clear_screen(&mut self, vram: &mut [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT]) {
         for x in vram {
             for y in x {
                 *y = 0;
@@ -83,14 +83,14 @@ impl CPU {
     // 00EE: Subroutine return
     // Returning from a subroutine is done with 00EE, and it does this by removing (“popping”)
     // the last address from the stack and setting the PC to it.
-    fn return_from_subroutine(&mut self, stack: &mut Stack) {
+    fn op_return_from_subroutine(&mut self, stack: &mut Stack) {
         self.program_counter = stack.pop();
     }
 
     // 1NNN: Jump
     // This instruction should simply set PC to NNN, causing the program to jump to that memory
     // location. Do not increment the PC afterwards, it jumps directly there.
-    fn jump_to(&mut self, nnn: u16) {
+    fn op_jump(&mut self, nnn: u16) {
         self.program_counter = nnn
     }
 
@@ -99,21 +99,21 @@ impl CPU {
     // you should set PC to NNN. However, the difference between a jump and a call is that this
     // instruction should first should push the current PC to the stack, so the subroutine can return
     // later.
-    fn subroutine(&mut self, stack: &mut Stack, nnn: u16) {
+    fn op_subroutine(&mut self, stack: &mut Stack, nnn: u16) {
         stack.push(self.program_counter);
         self.program_counter = nnn;
     }
 
     // 7XNN: Add
     // Add the value NN to VX.
-    fn add_to_register(&mut self, x: u16, nn: u8) {
+    fn op_add(&mut self, x: u16, nn: u8) {
         let vx = self.general_registers[x as usize];
         self.general_registers[x as usize] = vx + nn;
     }
 
     // ANNN: Set Index
     // This sets the index register I to the value NNN.
-    fn set_index(&mut self, nnn: u16) {
+    fn op_set_index(&mut self, nnn: u16) {
         self.index_register = nnn;
     }
 
@@ -125,7 +125,7 @@ impl CPU {
     // it is set to 0. If the sprite is positioned so part of it is outside
     // the coordinates of the display, it wraps around to the opposite side
     // of the screen.
-    fn update_vram(
+    fn op_display_vram(
         &mut self,
         vram: &mut [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
         ram: &RAM,

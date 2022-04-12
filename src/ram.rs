@@ -43,7 +43,8 @@ impl RAM {
     }
 
     pub fn get_instruction(&self, addr: u16) -> u16 {
-        (u16::from(self.read_memory(addr as usize)) << 8) | u16::from(self.read_memory((addr as usize) + 1))
+        (u16::from(self.read_memory(addr as usize)) << 8)
+            | u16::from(self.read_memory((addr as usize) + 1))
     }
 
     pub fn new() -> RAM {

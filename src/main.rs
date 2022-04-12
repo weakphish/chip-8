@@ -9,12 +9,12 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
+mod cpu;
 mod ram;
 mod stack;
-mod cpu;
 
-use crate::ram::RAM;
 use crate::cpu::CPU;
+use crate::ram::RAM;
 use crate::stack::Stack;
 
 pub const DISPLAY_HEIGHT: usize = 32;
@@ -50,27 +50,19 @@ fn main() -> Result<(), Error> {
     let mut pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(
-            DISPLAY_WIDTH as u32,
-            DISPLAY_HEIGHT as u32,
-            surface_texture,
-        )?
+        Pixels::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32, surface_texture)?
     };
 
     // Main event loop
     event_loop.run(move |event, _, control_flow| {
-        // Draw the current frame
+        // Draw the current frame from the contents of the VRAM
         if let Event::RedrawRequested(_) = event {
             let frame = pixels.get_frame();
             // Update frame with contents of device's VRAM
-            // TODO
-            for (chunk, vram_pix) in frame
-                .chunks_exact_mut(4)
-                .zip(vram.iter().flatten())
-            {
+            for (chunk, vram_pix) in frame.chunks_exact_mut(4).zip(vram.iter().flatten()) {
                 let new_chunk = match *vram_pix {
                     0 => [0, 0, 0, 255],
-                    _ => [255, 255, 255, 255]
+                    _ => [255, 255, 255, 255],
                 };
                 chunk.copy_from_slice(&new_chunk);
             }
