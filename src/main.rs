@@ -9,19 +9,28 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
-mod cpu;
-mod device;
 mod ram;
 mod stack;
+mod cpu;
+
+use crate::ram::RAM;
+use crate::cpu::CPU;
+use crate::stack::Stack;
+
+pub const DISPLAY_HEIGHT: usize = 32;
+pub const DISPLAY_WIDTH: usize = 64;
 
 fn main() -> Result<(), Error> {
-    // Create the struct that represents the physical device state
-    let mut dev = device::Device::new_device();
+    // Instantiate device components
+    let mut ram = RAM::new();
+    let mut stack = Stack::new();
+    let mut vram = [[u8::from(0); DISPLAY_WIDTH]; DISPLAY_HEIGHT]; // access at vram[y][x]
+    let mut cpu = CPU::new();
 
     // Load file into memory
     let args: Vec<String> = env::args().collect();
     let filename = args.get(1).expect("No ROM filename provided.");
-    dev.load_rom(File::open(filename).unwrap());
+    ram.load_rom(File::open(filename).unwrap());
     println!("Loaded ROM.");
 
     // Setup Pixels context
@@ -29,7 +38,7 @@ fn main() -> Result<(), Error> {
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let window = {
-        let size = LogicalSize::new(device::DISPLAY_WIDTH as f64, device::DISPLAY_HEIGHT as f64);
+        let size = LogicalSize::new(DISPLAY_WIDTH as f64, DISPLAY_HEIGHT as f64);
         WindowBuilder::new()
             .with_title("Chip-8")
             .with_inner_size(size)
@@ -42,8 +51,8 @@ fn main() -> Result<(), Error> {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
         Pixels::new(
-            device::DISPLAY_WIDTH as u32,
-            device::DISPLAY_HEIGHT as u32,
+            DISPLAY_WIDTH as u32,
+            DISPLAY_HEIGHT as u32,
             surface_texture,
         )?
     };
@@ -54,18 +63,16 @@ fn main() -> Result<(), Error> {
         if let Event::RedrawRequested(_) = event {
             let frame = pixels.get_frame();
             // Update frame with contents of device's VRAM
-            if dev.get_vram_changed() {
-                // TODO
-                for (chunk, vram_pix) in frame
-                    .chunks_exact_mut(4)
-                    .zip(dev.get_vram().iter().flatten())
-                {
-                    let new_chunk = match *vram_pix {
-                        0 => [0, 0, 0, 255],
-                        _ => [255, 255, 255, 255]
-                    };
-                    chunk.copy_from_slice(&new_chunk);
-                }
+            // TODO
+            for (chunk, vram_pix) in frame
+                .chunks_exact_mut(4)
+                .zip(vram.iter().flatten())
+            {
+                let new_chunk = match *vram_pix {
+                    0 => [0, 0, 0, 255],
+                    _ => [255, 255, 255, 255]
+                };
+                chunk.copy_from_slice(&new_chunk);
             }
             if pixels
                 .render()
@@ -91,7 +98,7 @@ fn main() -> Result<(), Error> {
             }
 
             // Update internal state and request a redraw
-            dev.emulate_cycle();
+            cpu.emulate_cycle(&mut stack, &mut vram, &mut ram);
             window.request_redraw();
         }
     });
