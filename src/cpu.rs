@@ -51,6 +51,7 @@ impl CPU {
             (0x0, 0x0, 0xE, 0x0) => self.clear_screen(vram),
             (0x0, 0x0, 0xE, 0xE) => self.return_from_subroutine(stack),
             (0x1, _, _, _) => self.jump_to(nnn),
+            (0x2, _, _, _) => self.subroutine(stack, nnn),
             (0x6, x, _, _) => self.general_registers[x as usize] = nn,
             (0x7, x, _, _) => self.add_to_register(x, nn),
             (0xA, _, _, _) => self.set_index(nnn),
