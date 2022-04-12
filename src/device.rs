@@ -1,4 +1,3 @@
-use bitvec::prelude::*;
 use std::fs::File;
 
 pub const DISPLAY_HEIGHT: usize = 32;
