@@ -1,0 +1,26 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug IBM logo",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=chip-8",
+                    "--package=chip-8"
+                ],
+                "filter": {
+                    "name": "chip-8",
+                    "kind": "bin"
+                }
+            },
+            "args": ["./roms/ibm.ch8"],
+            "cwd": "${workspaceFolder}"
+        },
+    ]
+}

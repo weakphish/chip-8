@@ -9,17 +9,17 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
-mod device;
 mod cpu;
-mod stack;
+mod device;
 mod ram;
+mod stack;
 
 fn main() -> Result<(), Error> {
     // Create the struct that represents the physical device state
     let mut dev = device::Device::new_device();
 
     // Load file into memory
-    let args: Vec<String>  = env::args().collect();
+    let args: Vec<String> = env::args().collect();
     let filename = args.get(1).expect("No ROM filename provided.");
     dev.load_rom(File::open(filename).unwrap());
     println!("Loaded ROM.");
@@ -41,7 +41,11 @@ fn main() -> Result<(), Error> {
     let mut pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(device::DISPLAY_WIDTH as u32, device::DISPLAY_HEIGHT as u32, surface_texture)?
+        Pixels::new(
+            device::DISPLAY_WIDTH as u32,
+            device::DISPLAY_HEIGHT as u32,
+            surface_texture,
+        )?
     };
 
     // Main event loop
@@ -51,15 +55,16 @@ fn main() -> Result<(), Error> {
             let frame = pixels.get_frame();
             // Update frame with contents of device's VRAM
             if dev.get_vram_changed() {
-                let vram_snap = dev.get_vram();
-                for (vram_pixel, frame_pixel) in vram_snap.iter().flatten().zip(frame.chunks_exact_mut(4)) {
-                    let chunk = if *vram_pixel {
-                        [255, 255, 255, 255]
-                    } else {
-                        [0, 0, 0, 255]
+                // TODO
+                for (chunk, vram_pix) in frame
+                    .chunks_exact_mut(4)
+                    .zip(dev.get_vram().iter().flatten())
+                {
+                    let new_chunk = match *vram_pix {
+                        0 => [0, 0, 0, 255],
+                        _ => [255, 255, 255, 255]
                     };
-                    frame_pixel.copy_from_slice(&chunk);
-                    println!("Set {:?} to {:?}", frame_pixel, vram_pixel);
+                    chunk.copy_from_slice(&new_chunk);
                 }
             }
             if pixels
