@@ -46,7 +46,7 @@ impl RAM {
         (u16::from(self.read_memory(addr as usize)) << 8) | u16::from(self.read_memory((addr as usize) + 1))
     }
 
-    pub fn new_ram() -> RAM {
+    pub fn new() -> RAM {
         let mut r = RAM {
             memory: vec![0; MEM_BYTES],
         };

@@ -1,22 +1,26 @@
 use std::fs::File;
 
+use crate::stack;
+
 pub const DISPLAY_HEIGHT: usize = 32;
 pub const DISPLAY_WIDTH: usize = 64;
 
 pub struct Device {
     ram: crate::ram::RAM,
-    vram_changed: bool,                            // special flag bc i'm an idiot
-    vram: [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],   // access at vram[y][x]
+    stack: stack::Stack,
+    vram_changed: bool,                          // special flag bc i'm an idiot
+    vram: [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT], // access at vram[y][x]
     cpu: crate::cpu::CPU,
 }
 
 impl Device {
     pub fn new_device() -> Device {
         Device {
-            ram: crate::ram::RAM::new_ram(),
+            ram: crate::ram::RAM::new(),
+            stack: crate::stack::Stack::new(),
             vram_changed: false,
             vram: [[0; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
-            cpu: crate::cpu::CPU::new_cpu(),
+            cpu: crate::cpu::CPU::new(),
         }
     }
 
@@ -88,11 +92,28 @@ impl Device {
         }
     }
 
+    // 00EE: Subroutine return
+    // Returning from a subroutine is done with 00EE, and it does this by removing (“popping”)
+    // the last address from the stack and setting the PC to it.
+    fn return_from_subroutine(&mut self) {
+        self.cpu.program_counter = self.stack.pop();
+    }
+
     // 1NNN: Jump
     // This instruction should simply set PC to NNN, causing the program to jump to that memory
     // location. Do not increment the PC afterwards, it jumps directly there.
     fn jump_to(&mut self, nnn: u16) {
         self.cpu.program_counter = nnn
+    }
+
+    // 2NNN: Subroutine
+    // Calls the subroutine at memory location NNN. In other words, just like 1NNN,
+    // you should set PC to NNN. However, the difference between a jump and a call is that this
+    // instruction should first should push the current PC to the stack, so the subroutine can return 
+    // later.
+    fn subroutine(&mut self, nnn: u16) {
+        self.stack.push(self.cpu.program_counter);
+        self.cpu.program_counter = nnn;
     }
 
     // 7XNN: Add

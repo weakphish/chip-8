@@ -9,7 +9,7 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new_cpu() -> CPU {
+    pub fn new() -> CPU {
         CPU {
             program_counter: crate::ram::PROG_MEM_START as u16,
             general_registers: [0; NUM_REGISTERS],
