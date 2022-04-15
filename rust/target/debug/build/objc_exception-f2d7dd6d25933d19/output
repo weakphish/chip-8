@@ -1,0 +1,26 @@
+TARGET = Some("aarch64-apple-darwin")
+OPT_LEVEL = Some("0")
+HOST = Some("aarch64-apple-darwin")
+CC_aarch64-apple-darwin = None
+CC_aarch64_apple_darwin = None
+HOST_CC = None
+CC = None
+CFLAGS_aarch64-apple-darwin = None
+CFLAGS_aarch64_apple_darwin = None
+HOST_CFLAGS = None
+CFLAGS = None
+CRATE_CC_NO_DEFAULTS = None
+DEBUG = Some("true")
+CARGO_CFG_TARGET_FEATURE = None
+running: "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-g" "-fno-omit-frame-pointer" "-arch" "arm64" "-Wall" "-Wextra" "-o" "/Users/weakphish/Developer/chip-8/target/debug/build/objc_exception-f2d7dd6d25933d19/out/extern/exception.o" "-c" "extern/exception.m"
+exit status: 0
+AR_aarch64-apple-darwin = None
+AR_aarch64_apple_darwin = None
+HOST_AR = None
+AR = None
+running: "ar" "cq" "/Users/weakphish/Developer/chip-8/target/debug/build/objc_exception-f2d7dd6d25933d19/out/libexception.a" "/Users/weakphish/Developer/chip-8/target/debug/build/objc_exception-f2d7dd6d25933d19/out/extern/exception.o"
+exit status: 0
+running: "ar" "s" "/Users/weakphish/Developer/chip-8/target/debug/build/objc_exception-f2d7dd6d25933d19/out/libexception.a"
+exit status: 0
+cargo:rustc-link-lib=static=exception
+cargo:rustc-link-search=native=/Users/weakphish/Developer/chip-8/target/debug/build/objc_exception-f2d7dd6d25933d19/out
