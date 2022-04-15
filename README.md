@@ -6,5 +6,6 @@ I learn, so I figured I'd put it all in one repo.
 # Languages (to learn / implement)
 - [X] Rust
 - [ ] Kotlin
+  - Possibly with Skia? / Skiko
 - [ ] Ruby
 - [ ] F#
