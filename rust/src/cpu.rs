@@ -192,6 +192,23 @@ impl CPU {
         self.general_registers[x as usize] = result;
         self.general_registers[0xF] = u8::from(flag);
     }
+
+    // 8XY5: Subtract (VX - VY into VX)
+    // These both subtract the value in one register from the other, and put the result in VX. 
+    // In both cases, VY is not affected.
+    //
+    // This subtraction will also affect the carry flag, but note that it’s opposite from what you 
+    // might think. If the minuend (the first operand) is larger than the subtrahend 
+    // (second operand) VF will be set to 1. If the subtrahend is larger, and we “underflow” the 
+    // result, VF is set to 0. Another way of thinking of it is that VF is set to 1 before the 
+    // subtraction, and then the subtraction either borrows from VF (setting it to 0) or not.
+    fn op_subtract_vy_from_vx(&mut self, x: u16, y: u16) {
+        // TODO
+    }
+    // 8XY7: Subtract (VY - VX into VX)
+    fn op_subtract_vx_from_vy(&mut self, x: u16, y: u16) {
+        // TODO
+    }
    
     // ANNN: Set Index
     // This sets the index register I to the value NNN.

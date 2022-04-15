@@ -1,1 +1,0 @@
-/Users/weakphish/Developer/chip-8/target/debug/chip-8: /Users/weakphish/Developer/chip-8/src/cpu.rs /Users/weakphish/Developer/chip-8/src/main.rs /Users/weakphish/Developer/chip-8/src/ram.rs /Users/weakphish/Developer/chip-8/src/stack.rs
