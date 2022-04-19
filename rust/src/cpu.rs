@@ -1,5 +1,5 @@
 use crate::{ram::RAM, stack::Stack, DISPLAY_HEIGHT, DISPLAY_WIDTH};
-
+use rand::{Rng, prelude::ThreadRng};
 
 const NUM_REGISTERS: usize = 16;
 
@@ -9,6 +9,7 @@ pub struct CPU {
     pub sound_timer: u8,
     pub program_counter: u16,
     pub index_register: u16,
+    pub rng: ThreadRng
 }
 
 impl CPU {
@@ -19,6 +20,7 @@ impl CPU {
             delay_timer: 0,
             sound_timer: 0,
             index_register: 0,
+            rng: rand::thread_rng()
         }
     }
 
@@ -69,6 +71,8 @@ impl CPU {
             (0x8, x, y, 0xE) => self.op_shift_left(x, y),
             (0x9, x, y, _) => self.op_skip_if_not_eq_reg(x, y),
             (0xA, _, _, _) => self.op_set_index(nnn),
+            (0xB, _, _, _) => self.op_jump_location_plus_reg(nnn),
+            (0xC, x, _, _) => self.op_rand_and(x, nn),
             (0xD, x, y, n) => self.op_display_vram(vram, ram, x, y, n as u8),
             _ => panic!(
                 "Unknown opcode ({:#01x} {:#01x} {:#01x} {:#01x})",
@@ -265,6 +269,27 @@ impl CPU {
     // This sets the index register I to the value NNN.
     fn op_set_index(&mut self, nnn: u16) {
         self.index_register = nnn;
+    }
+    /** 
+     * Bnnn - JP V0, addr
+     * Jump to location nnn + V0.
+    */ 
+    fn op_jump_location_plus_reg(&mut self, nnn: u16) {
+        self.program_counter = (self.general_registers[0] as u16) + nnn;
+    }
+
+
+    /*
+    
+    Cxkk - RND Vx, byte
+    Set Vx = random byte AND kk.
+
+    The interpreter generates a random number from 0 to 255, which is then ANDed with the value kk. The results are stored in Vx. See instruction 8xy2 for more information on AND.
+    
+    */
+    fn op_rand_and(&mut self, x: u16, nn: u8) {
+        let rand: u8 = self.rng.gen();
+        self.general_registers[x as usize] = rand & nn;
     }
 
     // DXYN: Display
