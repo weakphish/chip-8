@@ -57,6 +57,15 @@ impl CPU {
             (0x6, x, _, _) => self.general_registers[x as usize] = nn,
             (0x5, x, y, _) => self.op_skip_if_eq_reg(x, y),
             (0x7, x, _, _) => self.op_add(x, nn),
+            (0x8, x, y, 0) => self.op_set_vx_to_vy(x, y),
+            (0x8, x, y, 0x1) => self.op_binary_or(x, y),
+            (0x8, x, y, 0x2) => self.op_binary_and(x, y),
+            (0x8, x, y, 0x3) => self.op_logical_xor(x, y),
+            (0x8, x, y, 0x4) => self.op_add_with_carry(x, y),
+            (0x8, x, y, 0x5) => self.op_subtract_vy_from_vx(x, y),
+            (0x8, x, y, 0x7) => self.op_subtract_vx_from_vy(x, y),
+            (0x8, x, y, 6) => self.op_shift_right(x, y),
+            (0x8, x, y, 0xE) => self.op_shift_left(x, y),
             (0x9, x, y, _) => self.op_skip_if_not_eq_reg(x, y),
             (0xA, _, _, _) => self.op_set_index(nnn),
             (0xD, x, y, n) => self.op_display_vram(vram, ram, x, y, n as u8),
@@ -135,7 +144,7 @@ impl CPU {
     }
     // ... while 9XY0 skips if they are not equal.
     fn op_skip_if_not_eq_reg(&mut self, x: u16, y: u16) {
-            if self.general_registers[x as usize] != self.general_registers[y as usize] {
+        if self.general_registers[x as usize] != self.general_registers[y as usize] {
             self.increment_pc();
         }
     }
@@ -172,7 +181,7 @@ impl CPU {
     }
 
     // 8XY3: Logical XOR
-    // VX is set to the bitwise/binary exclusive OR (XOR) of VX and VY. 
+    // VX is set to the bitwise/binary exclusive OR (XOR) of VX and VY.
     fn op_logical_xor(&mut self, x: u16, y: u16) {
         let vx = self.general_registers[x as usize];
         let vy = self.general_registers[y as usize];
@@ -183,7 +192,7 @@ impl CPU {
     // 8XY4: Add
     // VX is set to the value of VX + VY
     // Unlike 7XNN, the carry flag is affected. If the result is > 255, the flag register VF is set
-    // to 1. Otherwise, it is set to 0. 
+    // to 1. Otherwise, it is set to 0.
     fn op_add_with_carry(&mut self, x: u16, y: u16) {
         let vx = self.general_registers[x as usize];
         let vy = self.general_registers[y as usize];
@@ -194,22 +203,63 @@ impl CPU {
     }
 
     // 8XY5: Subtract (VX - VY into VX)
-    // These both subtract the value in one register from the other, and put the result in VX. 
+    // These both subtract the value in one register from the other, and put the result in VX.
     // In both cases, VY is not affected.
     //
-    // This subtraction will also affect the carry flag, but note that it’s opposite from what you 
-    // might think. If the minuend (the first operand) is larger than the subtrahend 
-    // (second operand) VF will be set to 1. If the subtrahend is larger, and we “underflow” the 
-    // result, VF is set to 0. Another way of thinking of it is that VF is set to 1 before the 
+    // This subtraction will also affect the carry flag, but note that it’s opposite from what you
+    // might think. If the minuend (the first operand) is larger than the subtrahend
+    // (second operand) VF will be set to 1. If the subtrahend is larger, and we “underflow” the
+    // result, VF is set to 0. Another way of thinking of it is that VF is set to 1 before the
     // subtraction, and then the subtraction either borrows from VF (setting it to 0) or not.
     fn op_subtract_vy_from_vx(&mut self, x: u16, y: u16) {
-        // TODO
+        let vx = self.general_registers[x as usize];
+        let vy = self.general_registers[y as usize];
+
+        if vx > vy {
+            self.general_registers[0xF] = 1;
+        } else {
+            self.general_registers[0xF] = 0;
+        }
+
+        self.general_registers[x as usize] = vx - vy;
     }
     // 8XY7: Subtract (VY - VX into VX)
     fn op_subtract_vx_from_vy(&mut self, x: u16, y: u16) {
-        // TODO
+        let vx = self.general_registers[x as usize];
+        let vy = self.general_registers[y as usize];
+
+        if vy > vx {
+            self.general_registers[0xF] = 1;
+        } else {
+            self.general_registers[0xF] = 0;
+        }
+
+        self.general_registers[x as usize] = vy - vx;
     }
-   
+
+    // 8XY6 and 8XYE: Shift group
+    // In the CHIP-8 interpreter for the original COSMAC VIP, this instruction did the following: 
+    // It put the value of VY into VX, and then shifted the value in VX 1 bit to the right (8XY6) 
+    // or left (8XYE). VY was not affected, but the flag register VF would be set to the bit that 
+    // was shifted out.
+    // 
+    // However, starting with CHIP-48 and SUPER-CHIP in the early 1990s, these instructions were 
+    // changed so that they shifted VX in place, and ignored the Y completely.
+    // 
+    // Step by step:
+    // 1. (Optional, or configurable) Set VX to the value of VY
+    // 2. Shift the value of VX one bit to the right (8XY6) or left (8XYE)
+    // 3. Set VF to 1 if the bit that was shifted out was 1, or 0 if it was 0
+    fn op_shift_right(&mut self, x: u16, y: u16) {
+        let vx = self.general_registers[x as usize];
+        self.general_registers[x as usize] = vx >> 1;
+    }
+
+    fn op_shift_left(&mut self, x: u16, y: u16) {
+        let vx = self.general_registers[x as usize];
+        self.general_registers[x as usize] = vx << 1;
+    }
+
     // ANNN: Set Index
     // This sets the index register I to the value NNN.
     fn op_set_index(&mut self, nnn: u16) {
