@@ -1,3 +1,5 @@
+use log::{info, warn};
+
 const STACK_SIZE: usize = 16;
 
 pub struct Stack {
@@ -19,7 +21,13 @@ impl Stack {
     }
 
     pub fn pop(&mut self) -> u16 {
-        let v = self.s.pop().unwrap();
+        let v = match self.s.pop() {
+            Some(x) => x,
+            None => {
+                warn!("The stack just tried to pop an empty list");
+                0
+            }
+        };
         self.stack_pointer -= 1;
         v
     }

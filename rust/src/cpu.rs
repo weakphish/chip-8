@@ -1,5 +1,6 @@
 use crate::{ram::RAM, stack::Stack, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 
+
 const NUM_REGISTERS: usize = 16;
 
 pub struct CPU {
