@@ -255,12 +255,12 @@ impl CPU {
     // 1. (Optional, or configurable) Set VX to the value of VY
     // 2. Shift the value of VX one bit to the right (8XY6) or left (8XYE)
     // 3. Set VF to 1 if the bit that was shifted out was 1, or 0 if it was 0
-    fn op_shift_right(&mut self, x: u16, y: u16) {
+    fn op_shift_right(&mut self, x: u16, _y: u16) {
         let vx = self.general_registers[x as usize];
         self.general_registers[x as usize] = vx >> 1;
     }
 
-    fn op_shift_left(&mut self, x: u16, y: u16) {
+    fn op_shift_left(&mut self, x: u16, _y: u16) {
         let vx = self.general_registers[x as usize];
         self.general_registers[x as usize] = vx << 1;
     }
