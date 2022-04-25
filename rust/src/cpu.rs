@@ -1,5 +1,7 @@
-use crate::{ram::RAM, stack::Stack, DISPLAY_HEIGHT, DISPLAY_WIDTH};
-use rand::{Rng, prelude::ThreadRng};
+use crate::{keypad::Keypad, ram::RAM, stack::Stack, DISPLAY_HEIGHT, DISPLAY_WIDTH};
+use rand::{prelude::ThreadRng, Rng};
+use winit::event::VirtualKeyCode;
+use winit_input_helper::WinitInputHelper;
 
 const NUM_REGISTERS: usize = 16;
 
@@ -9,7 +11,7 @@ pub struct CPU {
     pub sound_timer: u8,
     pub program_counter: u16,
     pub index_register: u16,
-    pub rng: ThreadRng
+    pub rng: ThreadRng,
 }
 
 impl CPU {
@@ -20,7 +22,7 @@ impl CPU {
             delay_timer: 0,
             sound_timer: 0,
             index_register: 0,
-            rng: rand::thread_rng()
+            rng: rand::thread_rng(),
         }
     }
 
@@ -30,6 +32,7 @@ impl CPU {
 
     pub fn emulate_cycle(
         &mut self,
+        input: &WinitInputHelper,
         stack: &mut Stack,
         vram: &mut [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
         ram: &mut RAM,
@@ -67,8 +70,8 @@ impl CPU {
             (0x8, x, y, 0x4) => self.op_add_with_carry(x, y),
             (0x8, x, y, 0x5) => self.op_subtract_vy_from_vx(x, y),
             (0x8, x, y, 0x7) => self.op_subtract_vx_from_vy(x, y),
-            (0x8, x, y, 6) => self.op_shift_right(x, y),
-            (0x8, x, y, 0xE) => self.op_shift_left(x, y),
+            (0x8, x, y, 6) => self.op_shift_right(x),
+            (0x8, x, y, 0xE) => self.op_shift_left(x),
             (0x9, x, y, _) => self.op_skip_if_not_eq_reg(x, y),
             (0xA, _, _, _) => self.op_set_index(nnn),
             (0xB, _, _, _) => self.op_jump_location_plus_reg(nnn),
@@ -243,24 +246,24 @@ impl CPU {
     }
 
     // 8XY6 and 8XYE: Shift group
-    // In the CHIP-8 interpreter for the original COSMAC VIP, this instruction did the following: 
-    // It put the value of VY into VX, and then shifted the value in VX 1 bit to the right (8XY6) 
-    // or left (8XYE). VY was not affected, but the flag register VF would be set to the bit that 
+    // In the CHIP-8 interpreter for the original COSMAC VIP, this instruction did the following:
+    // It put the value of VY into VX, and then shifted the value in VX 1 bit to the right (8XY6)
+    // or left (8XYE). VY was not affected, but the flag register VF would be set to the bit that
     // was shifted out.
-    // 
-    // However, starting with CHIP-48 and SUPER-CHIP in the early 1990s, these instructions were 
+    //
+    // However, starting with CHIP-48 and SUPER-CHIP in the early 1990s, these instructions were
     // changed so that they shifted VX in place, and ignored the Y completely.
-    // 
+    //
     // Step by step:
     // 1. (Optional, or configurable) Set VX to the value of VY
     // 2. Shift the value of VX one bit to the right (8XY6) or left (8XYE)
     // 3. Set VF to 1 if the bit that was shifted out was 1, or 0 if it was 0
-    fn op_shift_right(&mut self, x: u16, y: u16) {
+    fn op_shift_right(&mut self, x: u16) {
         let vx = self.general_registers[x as usize];
         self.general_registers[x as usize] = vx >> 1;
     }
 
-    fn op_shift_left(&mut self, x: u16, y: u16) {
+    fn op_shift_left(&mut self, x: u16) {
         let vx = self.general_registers[x as usize];
         self.general_registers[x as usize] = vx << 1;
     }
@@ -270,23 +273,17 @@ impl CPU {
     fn op_set_index(&mut self, nnn: u16) {
         self.index_register = nnn;
     }
-    /** 
-     * Bnnn - JP V0, addr
-     * Jump to location nnn + V0.
-    */ 
+
+    // BNNN - JP V0, addr
+    // Jump to location nnn + V0.
     fn op_jump_location_plus_reg(&mut self, nnn: u16) {
         self.program_counter = (self.general_registers[0] as u16) + nnn;
     }
 
-
-    /*
-    
-    Cxkk - RND Vx, byte
-    Set Vx = random byte AND kk.
-
-    The interpreter generates a random number from 0 to 255, which is then ANDed with the value kk. The results are stored in Vx. See instruction 8xy2 for more information on AND.
-    
-    */
+    // CXKK - RND Vx, byte
+    // Set Vx = random byte AND kk.
+    // The interpreter generates a random number from 0 to 255, which is then ANDed with the value
+    // kk. The results are stored in Vx. See instruction 8xy2 for more information on AND.
     fn op_rand_and(&mut self, x: u16, nn: u8) {
         let rand: u8 = self.rng.gen();
         self.general_registers[x as usize] = rand & nn;
@@ -318,6 +315,21 @@ impl CPU {
                 self.general_registers[0xF] |= fill & vram[y][x];
                 vram[y][x] ^= fill;
             }
+        }
+    }
+
+    // Skip if key group
+    // Like the earlier skip instructions, these two also skip the following instruction based on
+    // a condition. These skip based on whether the player is currently pressing a key or not.
+    // These instructions (unlike the later FX0A) don’t wait for input, they just check if the key is currently being held down.
+
+    // EX9E: Skip if pressed
+    // Will skip one instruction (increment PC by 2) if the key corresponding to the value in VX
+    // is pressed.
+    fn op_skip_if_pressed(&self) {
+        // Query keypad
+        if input.key_pressed_os(VirtualKeyCode::A) {
+            println!("The 'A' key was pressed on the keyboard (OS repeating)");
         }
     }
 }
