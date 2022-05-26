@@ -99,6 +99,7 @@ impl CPU {
             (0xB, _, _, _) => self.op_jump_location_plus_reg(nnn),
             (0xC, x, _, _) => self.op_rand_and(x, nn),
             (0xD, x, y, n) => self.op_display_vram(vram, ram, x, y, n as u8),
+            (0xE, x, 0x9, 0xE) => self.op_skip_if_pressed(input, x),
             _ => panic!(
                 "Unknown opcode ({:#01x} {:#01x} {:#01x} {:#01x})",
                 nibbles.0, nibbles.1, nibbles.2, nibbles.3
