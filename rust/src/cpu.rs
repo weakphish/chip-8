@@ -1,4 +1,4 @@
-use crate::{keypad::Keypad, ram::RAM, stack::Stack, DISPLAY_HEIGHT, DISPLAY_WIDTH};
+use crate::{ram::RAM, stack::Stack, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 use rand::{prelude::ThreadRng, Rng};
 use winit::event::VirtualKeyCode;
 use winit_input_helper::WinitInputHelper;
@@ -28,6 +28,28 @@ impl CPU {
 
     pub fn increment_pc(&mut self) {
         self.program_counter += 2;
+    }
+
+    pub fn lookup_key_code(&self, value: u8) -> VirtualKeyCode {
+        match value {
+            0x0 => VirtualKeyCode::Key1,
+            0x1 => VirtualKeyCode::Key2,
+            0x2 => VirtualKeyCode::Key3,
+            0x3 => VirtualKeyCode::C,
+            0x4 => VirtualKeyCode::Key4,
+            0x5 => VirtualKeyCode::Key5,
+            0x6 => VirtualKeyCode::Key6,
+            0x7 => VirtualKeyCode::D,
+            0x8 => VirtualKeyCode::Key7,
+            0x9 => VirtualKeyCode::Key8,
+            0xA => VirtualKeyCode::Key9,
+            0xB => VirtualKeyCode::E,
+            0xC => VirtualKeyCode::A,
+            0xD => VirtualKeyCode::Key0,
+            0xE => VirtualKeyCode::B,
+            0xF => VirtualKeyCode::F,
+            _ => VirtualKeyCode::F1,
+        }
     }
 
     pub fn emulate_cycle(
@@ -70,8 +92,8 @@ impl CPU {
             (0x8, x, y, 0x4) => self.op_add_with_carry(x, y),
             (0x8, x, y, 0x5) => self.op_subtract_vy_from_vx(x, y),
             (0x8, x, y, 0x7) => self.op_subtract_vx_from_vy(x, y),
-            (0x8, x, y, 6) => self.op_shift_right(x),
-            (0x8, x, y, 0xE) => self.op_shift_left(x),
+            (0x8, x, y, 6) => self.op_shift_right(x, y),
+            (0x8, x, y, 0xE) => self.op_shift_left(x, y),
             (0x9, x, y, _) => self.op_skip_if_not_eq_reg(x, y),
             (0xA, _, _, _) => self.op_set_index(nnn),
             (0xB, _, _, _) => self.op_jump_location_plus_reg(nnn),
@@ -321,15 +343,16 @@ impl CPU {
     // Skip if key group
     // Like the earlier skip instructions, these two also skip the following instruction based on
     // a condition. These skip based on whether the player is currently pressing a key or not.
-    // These instructions (unlike the later FX0A) don’t wait for input, they just check if the key is currently being held down.
+    // These instructions (unlike the later FX0A) don’t wait for input, they just check if the key
+    // is currently being held down.
 
     // EX9E: Skip if pressed
     // Will skip one instruction (increment PC by 2) if the key corresponding to the value in VX
     // is pressed.
-    fn op_skip_if_pressed(&self) {
-        // Query keypad
-        if input.key_pressed_os(VirtualKeyCode::A) {
-            println!("The 'A' key was pressed on the keyboard (OS repeating)");
+    fn op_skip_if_pressed(&mut self, input: &WinitInputHelper, x: u16) {
+        let queried_key = self.lookup_key_code(self.general_registers[x as usize]);
+        if input.key_pressed(queried_key) {
+            self.increment_pc();
         }
     }
 }
