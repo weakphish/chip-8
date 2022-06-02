@@ -356,4 +356,27 @@ impl CPU {
             self.increment_pc();
         }
     }
+
+    /// EXA1: Skips if the key corresponding to the value in VX is not pressed.
+    fn op_skip_if_not_pressed(&mut self, input: &WinitInputHelper, x: u16) {
+        let queried_key = self.lookup_key_code(self.general_registers[x as usize]);
+        if !input.key_pressed(queried_key) {
+            self.increment_pc();
+        }
+    }
+
+    /// FX07: Sets VX to the current value of the delay timer
+    fn op_set_to_delay(&mut self, x: u16) {
+        self.general_registers[x as usize] = self.delay_timer;
+    }
+
+    /// FX15: Sets delay timer to VX
+    fn op_set_delay_to(&mut self, x: u16) {
+        self.delay_timer = self.general_registers[x as usize];
+    }
+
+    /// FX18: Sets sound timer to VX
+    fn op_set_sound_to(&mut self, x: u16) {
+        self.sound_timer = self.general_registers[x as usize];
+    }
 }
