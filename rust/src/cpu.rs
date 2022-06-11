@@ -1,5 +1,6 @@
 use crate::{ram::RAM, stack::Stack, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 use rand::{prelude::ThreadRng, Rng};
+use winit::event::Event;
 use winit::event::VirtualKeyCode;
 use winit_input_helper::WinitInputHelper;
 
@@ -54,7 +55,7 @@ impl CPU {
 
     pub fn emulate_cycle(
         &mut self,
-        input: &WinitInputHelper,
+        event: Event<E>,
         stack: &mut Stack,
         vram: &mut [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
         ram: &mut RAM,
@@ -378,5 +379,22 @@ impl CPU {
     /// FX18: Sets sound timer to VX
     fn op_set_sound_to(&mut self, x: u16) {
         self.sound_timer = self.general_registers[x as usize];
+    }
+
+    /// FX1E: Add to index
+    /// Add VX to the index register I
+    fn op_add_to_index(&mut self, x: u16) {
+        let tmp_i = self.index_register;
+        let (result, flag) = tmp_i.overflowing_add(self.general_registers[x as usize].into());
+        self.general_registers[0xF] = u8::from(flag);
+        self.index_register = result;
+    }
+
+    /// FX0A: Get key
+    /// "Blocks" and waits for key input.
+    fn op_get_key(&self, input: &WinitInputHelper) {
+        // FIXME
+        let pressed = false;
+        for k in VirtualKeyCode {}
     }
 }
