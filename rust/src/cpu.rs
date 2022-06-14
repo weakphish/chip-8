@@ -1,7 +1,9 @@
 use crate::{ram::RAM, stack::Stack, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 use rand::{prelude::ThreadRng, Rng};
+use winit::event::DeviceEvent;
 use winit::event::Event;
 use winit::event::VirtualKeyCode;
+use winit::event_loop::ControlFlow;
 use winit_input_helper::WinitInputHelper;
 
 const NUM_REGISTERS: usize = 16;
@@ -53,12 +55,13 @@ impl CPU {
         }
     }
 
-    pub fn emulate_cycle(
+    pub fn emulate_cycle<T>(
         &mut self,
-        event: Event<E>,
+        event: &Event<T>,
         stack: &mut Stack,
         vram: &mut [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
         ram: &mut RAM,
+        control_flow: &mut ControlFlow
     ) {
         // Each instruction is 2 bytes
         // Fetch the next instruction from memory at the PC and increment it
@@ -100,7 +103,10 @@ impl CPU {
             (0xB, _, _, _) => self.op_jump_location_plus_reg(nnn),
             (0xC, x, _, _) => self.op_rand_and(x, nn),
             (0xD, x, y, n) => self.op_display_vram(vram, ram, x, y, n as u8),
-            (0xE, x, 0x9, 0xE) => self.op_skip_if_pressed(input, x),
+            (0xE, x, 0x9, 0xE) => self.op_skip_if_pressed(&event, x),
+            (0xF, x, 0x0, 0xA) => {
+                *control_flow = ControlFlow::Wait;
+            }
             _ => panic!(
                 "Unknown opcode ({:#01x} {:#01x} {:#01x} {:#01x})",
                 nibbles.0, nibbles.1, nibbles.2, nibbles.3
@@ -351,19 +357,41 @@ impl CPU {
     // EX9E: Skip if pressed
     // Will skip one instruction (increment PC by 2) if the key corresponding to the value in VX
     // is pressed.
-    fn op_skip_if_pressed(&mut self, input: &WinitInputHelper, x: u16) {
+    fn op_skip_if_pressed<T>(&mut self, e: &Event<T>, x: u16) {
         let queried_key = self.lookup_key_code(self.general_registers[x as usize]);
-        if input.key_pressed(queried_key) {
-            self.increment_pc();
+        //if event.key_pressed(queried_key) {
+        //    self.increment_pc();
+        //}
+
+        if let Event::DeviceEvent { device_id, event } = e {
+            if let DeviceEvent::Key(keyboard_stuff) = event {
+                if let Some(virtual_key_code) = keyboard_stuff.virtual_keycode {
+                    if virtual_key_code == queried_key {
+                        self.increment_pc();
+                    }
+                }
+            }
         }
+        
     }
 
     /// EXA1: Skips if the key corresponding to the value in VX is not pressed.
-    fn op_skip_if_not_pressed(&mut self, input: &WinitInputHelper, x: u16) {
+    fn op_skip_if_not_pressed<T>(&mut self, e: &Event<T>, x: u16) {
         let queried_key = self.lookup_key_code(self.general_registers[x as usize]);
-        if !input.key_pressed(queried_key) {
-            self.increment_pc();
+        //if !input.key_pressed(queried_key) {
+        //    self.increment_pc();
+        //}
+
+        if let Event::DeviceEvent { device_id, event} = e {
+            if let DeviceEvent::Key(keyboard_stuff) = event {
+                if let Some(virtual_key_code) = keyboard_stuff.virtual_keycode {
+                    if virtual_key_code == queried_key {
+                        return;
+                    }
+                }
+            }
         }
+        self.increment_pc();
     }
 
     /// FX07: Sets VX to the current value of the delay timer
@@ -392,9 +420,19 @@ impl CPU {
 
     /// FX0A: Get key
     /// "Blocks" and waits for key input.
-    fn op_get_key(&self, input: &WinitInputHelper) {
-        // FIXME
-        let pressed = false;
-        for k in VirtualKeyCode {}
+    /// This instruction “blocks”; it stops executing instructions and waits for key input (or loops forever, unless a key is pressed).
+    /// In other words, if you followed my advice earlier and increment PC after fetching each instruction, then it should be decremented again here unless a key is pressed. 
+    /// Otherwise, PC should simply not be incremented.
+    /// Although this instruction stops the program from executing further instructions, the timers (delay timer and sound timer) should still be decreased while it’s waiting.
+    /// If a key is pressed while this instruction is waiting for input, its hexadecimal value will be put in VX and execution continues.
+    /// On the original COSMAC VIP, the key was only registered when it was pressed and then released.
+    fn op_get_key<T>(&self, e: &Event<T>) {
+        if let Event::DeviceEvent { device_id, event } = e {
+            if let DeviceEvent::Key(keyboard_stuff) = event {
+                if let Some(virtual_key_code) = keyboard_stuff.virtual_keycode {
+
+                }
+            }
+        }
     }
 }
