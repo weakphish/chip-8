@@ -90,7 +90,7 @@ fn main() -> Result<(), Error> {
             }
 
             // Update internal state and request a redraw
-            cpu.emulate_cycle(&event, &mut stack, &mut vram, &mut ram, control_flow);
+            cpu.emulate_cycle(&event, &mut stack, &mut vram, &mut ram);
             window.request_redraw();
         }
     });

@@ -3,8 +3,6 @@ use rand::{prelude::ThreadRng, Rng};
 use winit::event::DeviceEvent;
 use winit::event::Event;
 use winit::event::VirtualKeyCode;
-use winit::event_loop::ControlFlow;
-use winit_input_helper::WinitInputHelper;
 
 const NUM_REGISTERS: usize = 16;
 
@@ -33,25 +31,49 @@ impl CPU {
         self.program_counter += 2;
     }
 
-    pub fn lookup_key_code(&self, value: u8) -> VirtualKeyCode {
+    pub fn decrement_pc(&mut self) {
+        self.program_counter -= 2;
+    }
+
+    pub fn lookup_key_code(&self, value: u8) -> Result<VirtualKeyCode, &'static str> {
         match value {
-            0x0 => VirtualKeyCode::Key1,
-            0x1 => VirtualKeyCode::Key2,
-            0x2 => VirtualKeyCode::Key3,
-            0x3 => VirtualKeyCode::C,
-            0x4 => VirtualKeyCode::Key4,
-            0x5 => VirtualKeyCode::Key5,
-            0x6 => VirtualKeyCode::Key6,
-            0x7 => VirtualKeyCode::D,
-            0x8 => VirtualKeyCode::Key7,
-            0x9 => VirtualKeyCode::Key8,
-            0xA => VirtualKeyCode::Key9,
-            0xB => VirtualKeyCode::E,
-            0xC => VirtualKeyCode::A,
-            0xD => VirtualKeyCode::Key0,
-            0xE => VirtualKeyCode::B,
-            0xF => VirtualKeyCode::F,
-            _ => VirtualKeyCode::F1,
+            0x0 => Ok(VirtualKeyCode::Key1),
+            0x1 => Ok(VirtualKeyCode::Key2),
+            0x2 => Ok(VirtualKeyCode::Key3),
+            0x3 => Ok(VirtualKeyCode::C),
+            0x4 => Ok(VirtualKeyCode::Key4),
+            0x5 => Ok(VirtualKeyCode::Key5),
+            0x6 => Ok(VirtualKeyCode::Key6),
+            0x7 => Ok(VirtualKeyCode::D),
+            0x8 => Ok(VirtualKeyCode::Key7),
+            0x9 => Ok(VirtualKeyCode::Key8),
+            0xA => Ok(VirtualKeyCode::Key9),
+            0xB => Ok(VirtualKeyCode::E),
+            0xC => Ok(VirtualKeyCode::A),
+            0xD => Ok(VirtualKeyCode::Key0),
+            0xE => Ok(VirtualKeyCode::B),
+            0xF => Ok(VirtualKeyCode::F),
+            _ => Err("Invalid hex value for keypad lookup"),
+        }
+    }
+
+    pub fn lookup_hex_of_key(&self, key: VirtualKeyCode) -> Result<u8, &'static str> {
+        match key {
+            VirtualKeyCode::Key1 => Ok(0x0),
+            VirtualKeyCode::Key2 => Ok(0x1),
+            VirtualKeyCode::Key3 => Ok(0x2),
+            VirtualKeyCode::Key4 => Ok(0x4),
+            VirtualKeyCode::Key5 => Ok(0x5),
+            VirtualKeyCode::Key6 => Ok(0x6),
+            VirtualKeyCode::Key7 => Ok(0x8),
+            VirtualKeyCode::Key8 => Ok(0x9),
+            VirtualKeyCode::Key9 => Ok(0xA),
+            VirtualKeyCode::Key0 => Ok(0xD),
+            VirtualKeyCode::A => Ok(0xC),
+            VirtualKeyCode::C => Ok(0x3),
+            VirtualKeyCode::D => Ok(0x7),
+            VirtualKeyCode::E => Ok(0xB),
+            _ => Err("Invalid key"),
         }
     }
 
@@ -61,7 +83,6 @@ impl CPU {
         stack: &mut Stack,
         vram: &mut [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
         ram: &mut RAM,
-        control_flow: &mut ControlFlow
     ) {
         // Each instruction is 2 bytes
         // Fetch the next instruction from memory at the PC and increment it
@@ -104,9 +125,7 @@ impl CPU {
             (0xC, x, _, _) => self.op_rand_and(x, nn),
             (0xD, x, y, n) => self.op_display_vram(vram, ram, x, y, n as u8),
             (0xE, x, 0x9, 0xE) => self.op_skip_if_pressed(&event, x),
-            (0xF, x, 0x0, 0xA) => {
-                *control_flow = ControlFlow::Wait;
-            }
+            (0xF, x, 0x0, 0xA) => self.op_get_key(&event, x),
             _ => panic!(
                 "Unknown opcode ({:#01x} {:#01x} {:#01x} {:#01x})",
                 nibbles.0, nibbles.1, nibbles.2, nibbles.3
@@ -358,7 +377,9 @@ impl CPU {
     // Will skip one instruction (increment PC by 2) if the key corresponding to the value in VX
     // is pressed.
     fn op_skip_if_pressed<T>(&mut self, e: &Event<T>, x: u16) {
-        let queried_key = self.lookup_key_code(self.general_registers[x as usize]);
+        let queried_key = self
+            .lookup_key_code(self.general_registers[x as usize])
+            .unwrap();
         //if event.key_pressed(queried_key) {
         //    self.increment_pc();
         //}
@@ -372,17 +393,18 @@ impl CPU {
                 }
             }
         }
-        
     }
 
     /// EXA1: Skips if the key corresponding to the value in VX is not pressed.
     fn op_skip_if_not_pressed<T>(&mut self, e: &Event<T>, x: u16) {
-        let queried_key = self.lookup_key_code(self.general_registers[x as usize]);
+        let queried_key = self
+            .lookup_key_code(self.general_registers[x as usize])
+            .unwrap();
         //if !input.key_pressed(queried_key) {
         //    self.increment_pc();
         //}
 
-        if let Event::DeviceEvent { device_id, event} = e {
+        if let Event::DeviceEvent { device_id, event } = e {
             if let DeviceEvent::Key(keyboard_stuff) = event {
                 if let Some(virtual_key_code) = keyboard_stuff.virtual_keycode {
                     if virtual_key_code == queried_key {
@@ -420,19 +442,29 @@ impl CPU {
 
     /// FX0A: Get key
     /// "Blocks" and waits for key input.
-    /// This instruction “blocks”; it stops executing instructions and waits for key input (or loops forever, unless a key is pressed).
-    /// In other words, if you followed my advice earlier and increment PC after fetching each instruction, then it should be decremented again here unless a key is pressed. 
-    /// Otherwise, PC should simply not be incremented.
-    /// Although this instruction stops the program from executing further instructions, the timers (delay timer and sound timer) should still be decreased while it’s waiting.
-    /// If a key is pressed while this instruction is waiting for input, its hexadecimal value will be put in VX and execution continues.
-    /// On the original COSMAC VIP, the key was only registered when it was pressed and then released.
-    fn op_get_key<T>(&self, e: &Event<T>) {
-        if let Event::DeviceEvent { device_id, event } = e {
-            if let DeviceEvent::Key(keyboard_stuff) = event {
-                if let Some(virtual_key_code) = keyboard_stuff.virtual_keycode {
-
+    /// This instruction “blocks”; it stops executing instructions and waits for key input
+    /// (or loops forever, unless a key is pressed).
+    /// In other words, if you followed my advice earlier and increment PC after fetching each
+    /// instruction, then it should be decremented again here unless a key is pressed. Otherwise,
+    /// PC should simply not be incremented.
+    ///
+    /// Although this instruction stops the program from executing further instructions, the timers
+    /// (delay timer and sound timer) should still be decreased while it’s waiting.
+    ///
+    /// If a key is pressed while this instruction is waiting for input, its hexadecimal value
+    /// will be put in VX and execution continues. On the original COSMAC VIP, the key was only
+    /// registered when it was pressed and then released.
+    fn op_get_key<T>(&mut self, e: &Event<T>, x: u16) {
+        match e {
+            Event::DeviceEvent { device_id, event } => match event {
+                DeviceEvent::Key(keyboard) => {
+                    self.general_registers[x as usize] = self
+                        .lookup_hex_of_key(keyboard.virtual_keycode.unwrap())
+                        .unwrap();
                 }
-            }
+                _ => self.decrement_pc(),
+            },
+            _ => self.decrement_pc(),
         }
     }
 }
