@@ -492,7 +492,7 @@ impl CPU {
     /// An 8-bit register can hold two hexadecimal numbers, but this would only point to one
     /// character. The original COSMAC VIP interpreter just took the last nibble of VX and used
     /// that as the character.
-    fn op_font_character(&self, x: u16) {
+    fn op_font_character(&mut self, x: u16) {
         todo!();
     }
 
@@ -502,25 +502,43 @@ impl CPU {
     /// digits in memory at the address in the index register I. For example, if VX contains 156
     /// (or 9C in hexadecimal), it would put the number 1 at the address in I, 5 in address I + 1,
     /// and 6 in address I + 2.
-    fn op_coded_dec_conv(&mut self, x: u16) {
+    fn op_coded_dec_conv(&mut self, ram: &mut RAM, x: u16) {
         let mut vx = self.general_registers[x as usize];
-        let base = 10;
         let mut digit = 0;
+        let base = 10;
 
         while vx != 0 {
-            self.general_registers[self.index_register as usize] = vx % base;
+            ram.set_memory(vx % base, (self.index_register + digit) as usize)
+                .unwrap();
             vx /= base;
             digit += 1;
         }
     }
 
+    // These two instructions store registers to memory, or load them from memory, respectively.
+
     /// FX55: Store memory
-    fn op_store_memory(&self, x: u16) {
-        todo!();
+    /// For FX55, the value of each variable register from V0 to VX inclusive (if X is 0, then only
+    /// V0) will be stored in successive memory addresses, starting with the one that’s stored in
+    /// I. V0 will be stored at the address in I, V1 will be stored in I + 1, and so on, until
+    /// VX is stored in I + X.
+    fn op_store_memory(&mut self, ram: &mut RAM, x: u16) {
+        for vn in 0..x {
+            ram.set_memory(
+                self.general_registers[vn as usize],
+                (self.index_register + vn) as usize,
+            )
+            .unwrap();
+        }
     }
 
     /// FX65: Load memory
-    fn op_load_memory(&self, x: u16) {
-        todo!();
+    /// FX65 does the same thing, except that it takes the value stored at the memory addresses
+    /// and loads them into the variable registers instead.
+    fn op_load_memory(&mut self, ram: &RAM, x: u16) {
+        for vn in 0..x {
+            self.general_registers[vn as usize] =
+                ram.read_memory((self.index_register + vn) as usize);
+        }
     }
 }
