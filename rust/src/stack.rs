@@ -1,4 +1,4 @@
-use log::{info, warn};
+use log::warn;
 
 const STACK_SIZE: usize = 16;
 

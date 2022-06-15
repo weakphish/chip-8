@@ -125,6 +125,11 @@ impl CPU {
             (0xC, x, _, _) => self.op_rand_and(x, nn),
             (0xD, x, y, n) => self.op_display_vram(vram, ram, x, y, n as u8),
             (0xE, x, 0x9, 0xE) => self.op_skip_if_pressed(&event, x),
+            (0xE, x, 0xA, 0x1) => self.op_skip_if_not_pressed(&event, x),
+            (0xF, x, 0x0, 0x7) => self.op_set_to_delay(x),
+            (0xF, x, 0x1, 0x5) => self.op_set_delay_to(x),
+            (0xF, x, 0x1, 0x8) => self.op_set_sound_to(x),
+            (0xF, x, 0x1, 0xE) => self.op_add_to_index(x),
             (0xF, x, 0x0, 0xA) => self.op_get_key(&event, x),
             _ => panic!(
                 "Unknown opcode ({:#01x} {:#01x} {:#01x} {:#01x})",
@@ -167,8 +172,8 @@ impl CPU {
     // 2NNN: Subroutine
     // Calls the subroutine at memory location NNN. In other words, just like 1NNN,
     // you should set PC to NNN. However, the difference between a jump and a call is that this
-    // instruction should first should push the current PC to the stack, so the subroutine can return
-    // later.
+    // instruction should first should push the current PC to the stack, so the subroutine can
+    /// return later.
     fn op_subroutine(&mut self, stack: &mut Stack, nnn: u16) {
         stack.push(self.program_counter);
         self.program_counter = nnn;
@@ -384,7 +389,11 @@ impl CPU {
         //    self.increment_pc();
         //}
 
-        if let Event::DeviceEvent { device_id, event } = e {
+        if let Event::DeviceEvent {
+            device_id: _,
+            event,
+        } = e
+        {
             if let DeviceEvent::Key(keyboard_stuff) = event {
                 if let Some(virtual_key_code) = keyboard_stuff.virtual_keycode {
                     if virtual_key_code == queried_key {
@@ -404,7 +413,11 @@ impl CPU {
         //    self.increment_pc();
         //}
 
-        if let Event::DeviceEvent { device_id, event } = e {
+        if let Event::DeviceEvent {
+            device_id: _,
+            event,
+        } = e
+        {
             if let DeviceEvent::Key(keyboard_stuff) = event {
                 if let Some(virtual_key_code) = keyboard_stuff.virtual_keycode {
                     if virtual_key_code == queried_key {
@@ -456,7 +469,10 @@ impl CPU {
     /// registered when it was pressed and then released.
     fn op_get_key<T>(&mut self, e: &Event<T>, x: u16) {
         match e {
-            Event::DeviceEvent { device_id, event } => match event {
+            Event::DeviceEvent {
+                device_id: _,
+                event,
+            } => match event {
                 DeviceEvent::Key(keyboard) => {
                     self.general_registers[x as usize] = self
                         .lookup_hex_of_key(keyboard.virtual_keycode.unwrap())
@@ -466,5 +482,45 @@ impl CPU {
             },
             _ => self.decrement_pc(),
         }
+    }
+
+    /// FX29: Font Character
+    /// The index register I is set to the address of the hexadecimal character in VX. You probably
+    /// stored that font somewhere in the first 512 bytes of memory, so now you just need to point
+    /// I to the right character.
+    ///
+    /// An 8-bit register can hold two hexadecimal numbers, but this would only point to one
+    /// character. The original COSMAC VIP interpreter just took the last nibble of VX and used
+    /// that as the character.
+    fn op_font_character(&self, x: u16) {
+        todo!();
+    }
+
+    /// FX33: Binary-coded decimal conversion
+    /// This instruction is a little involved. It takes the number in VX (which is one byte, so
+    /// it can be any number from 0 to 255) and converts it to three decimal digits, storing these
+    /// digits in memory at the address in the index register I. For example, if VX contains 156
+    /// (or 9C in hexadecimal), it would put the number 1 at the address in I, 5 in address I + 1,
+    /// and 6 in address I + 2.
+    fn op_coded_dec_conv(&mut self, x: u16) {
+        let mut vx = self.general_registers[x as usize];
+        let base = 10;
+        let mut digit = 0;
+
+        while vx != 0 {
+            self.general_registers[self.index_register as usize] = vx % base;
+            vx /= base;
+            digit += 1;
+        }
+    }
+
+    /// FX55: Store memory
+    fn op_store_memory(&self, x: u16) {
+        todo!();
+    }
+
+    /// FX65: Load memory
+    fn op_load_memory(&self, x: u16) {
+        todo!();
     }
 }
