@@ -492,9 +492,7 @@ impl CPU {
     /// An 8-bit register can hold two hexadecimal numbers, but this would only point to one
     /// character. The original COSMAC VIP interpreter just took the last nibble of VX and used
     /// that as the character.
-    fn op_font_character(&mut self, x: u16) {
-        todo!();
-    }
+    fn op_font_character(&mut self, x: u16) {}
 
     /// FX33: Binary-coded decimal conversion
     /// This instruction is a little involved. It takes the number in VX (which is one byte, so
