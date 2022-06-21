@@ -131,6 +131,9 @@ impl CPU {
             (0xF, x, 0x1, 0x8) => self.op_set_sound_to(x),
             (0xF, x, 0x1, 0xE) => self.op_add_to_index(x),
             (0xF, x, 0x0, 0xA) => self.op_get_key(&event, x),
+            (0xF, x, 0x5, 0x5) => self.op_store_memory(ram, x),
+            (0xF, x, 0x6, 0x5) => self.op_load_memory(ram, x),
+            (0xF, x, 0x2, 0x9) => self.op_font_character(x),
             _ => panic!(
                 "Unknown opcode ({:#01x} {:#01x} {:#01x} {:#01x})",
                 nibbles.0, nibbles.1, nibbles.2, nibbles.3
@@ -492,7 +495,9 @@ impl CPU {
     /// An 8-bit register can hold two hexadecimal numbers, but this would only point to one
     /// character. The original COSMAC VIP interpreter just took the last nibble of VX and used
     /// that as the character.
-    fn op_font_character(&mut self, x: u16) {}
+    fn op_font_character(&mut self, x: u16) {
+        self.index_register = u16::from(self.general_registers[x as usize] * 5); // ??
+    }
 
     /// FX33: Binary-coded decimal conversion
     /// This instruction is a little involved. It takes the number in VX (which is one byte, so
