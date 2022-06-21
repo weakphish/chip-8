@@ -141,6 +141,12 @@ impl CPU {
             ),
         }
 
+        // Log opcode
+        println!(
+            "OP: {:#01x} {:#01x} {:#01x} {:#01x}",
+            nibbles.0, nibbles.1, nibbles.2, nibbles.3
+        );
+
         // Sleep to slow execution to a reasonable rate
         std::thread::sleep(std::time::Duration::new(0, 1000));
     }
@@ -218,8 +224,7 @@ impl CPU {
     // 7XNN: Add
     // Add the value NN to VX.
     fn op_add(&mut self, x: u16, nn: u8) {
-        let vx = self.general_registers[x as usize];
-        self.general_registers[x as usize] = vx + nn;
+        self.general_registers[x as usize] = self.general_registers[x as usize].wrapping_add(nn);
     }
 
     // 8XY0: Set
@@ -287,7 +292,8 @@ impl CPU {
             self.general_registers[0xF] = 0;
         }
 
-        self.general_registers[x as usize] = vx - vy;
+        //self.general_registers[x as usize] = vx - vy;
+        self.general_registers[x as usize] = vx.wrapping_sub(vy);
     }
     // 8XY7: Subtract (VY - VX into VX)
     fn op_subtract_vx_from_vy(&mut self, x: u16, y: u16) {
