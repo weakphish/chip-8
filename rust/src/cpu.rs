@@ -134,6 +134,7 @@ impl CPU {
             (0xF, x, 0x5, 0x5) => self.op_store_memory(ram, x),
             (0xF, x, 0x6, 0x5) => self.op_load_memory(ram, x),
             (0xF, x, 0x2, 0x9) => self.op_font_character(x),
+            (0xF, x, 0x3, 0x3) => self.op_coded_dec_conv(ram, x),
             _ => panic!(
                 "Unknown opcode ({:#01x} {:#01x} {:#01x} {:#01x})",
                 nibbles.0, nibbles.1, nibbles.2, nibbles.3
