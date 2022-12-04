@@ -2,8 +2,6 @@
 #define DEVICE_H
 
 #include <stdint.h>
-#include "cpu.h"
-#include "stack.h"
 
 #define KEYS 16
 #define DISPLAY_HEIGHT 32
