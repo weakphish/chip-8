@@ -35,7 +35,10 @@ uint8_t fontset[FONTSET_SIZE] = {
 
 typedef uint16_t opcode;
 
-typedef struct DeviceStruct {
+typedef struct DeviceStruct
+{
+  // The current opcode
+  unsigned char opcode;
   /*
    * The CHIP-8 has sixteen 8-bit registers, labeled V0 to VF. Each register is
    * able to hold any value from 0x00 to 0xFF. Register VF is a bit special.
