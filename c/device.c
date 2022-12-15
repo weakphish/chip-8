@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <time.h>
 
 #include "device.h"
 
@@ -18,6 +19,6 @@ Device *new_device()
 
 int rand_int()
 {
-    srand(time());
+    srand(time(NULL));
     return rand();
 }
